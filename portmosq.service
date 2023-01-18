@@ -1,0 +1,14 @@
+[Unit]
+Description=Portable Mosquitto
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RuntimeDirectory=mosquitto
+StateDirectory=mosquitto
+
+[Install]
+WantedBy=multi-user.target

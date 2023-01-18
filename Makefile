@@ -1,29 +1,34 @@
-all: portable-walkthrough-go.raw
+TARGET=build
+SVCNAME=portmosq
+DEBSDIR=debs
 
-# Build the static service binary from the Go source file
-portable-walkthrough-go: main.go
-	CGO_ENABLED=0 go build -tags netgo -compiler gccgo -gccgoflags '-static'
+all: ${SVCNAME}.raw
 
 # Build a a squashfs file system from the static service binary, the
 # two unit files and the os-release file (together with some auxiliary
 # empty directories and files that can be over-mounted from the host.
-portable-walkthrough-go.raw: portable-walkthrough-go portable-walkthrough-go.service portable-walkthrough-go.socket os-release
-	( rm -rf build && \
-	  mkdir -p build/usr/bin build/usr/lib/systemd/system build/etc build/proc build/sys build/dev build/run build/tmp build/var/tmp build/var/lib/walkthrough-go && \
-	  cp portable-walkthrough-go build/usr/bin/ && \
-	  cp portable-walkthrough-go.service portable-walkthrough-go.socket build/usr/lib/systemd/system && \
-	  cp os-release build/usr/lib/os-release && \
-	  touch build/etc/resolv.conf build/etc/machine-id && \
-	  rm -f portable-walkthrough-go.raw && \
-	  mksquashfs build/ portable-walkthrough-go.raw )
+${SVCNAME}.raw: install ${SVCNAME}.service os-release
+	mkdir -p ${TARGET}/usr/bin ${TARGET}/usr/lib/systemd/system ${TARGET}/etc ${TARGET}/proc ${TARGET}/sys ${TARGET}/dev ${TARGET}/run ${TARGET}/tmp ${TARGET}/var/tmp ${TARGET}/var/lib/mosquitto
+	cp ${SVCNAME}.service ${TARGET}/usr/lib/systemd/system
+	cp os-release ${TARGET}/usr/lib/os-release
+	touch ${TARGET}/etc/resolv.conf ${TARGET}/etc/machine-id
+	cp mosquitto.conf ${TARGET}/etc/mosquitto/
+	rm -f ${SVCNAME}.raw
+	mksquashfs ${TARGET}/ ${SVCNAME}.raw -noappend -comp xz
 
-# A shortcut for installing all needed build-time dependencies on Fedora
-install-tools:
-	dnf install gcc-go libgo-static glibc-static squashfs-tools
+install:
+	mkdir -p ${DEBSDIR}
+	cd ${DEBSDIR} && \
+	apt-get download libc6 libwrap0 libsystemd0 libdlt2 libssl3 libwebsockets16 \
+	  libnsl2 liblzma5 libzstd1 liblz4-1 libcap2 libgcrypt20 libev4 libuv1 \
+	  zlib1g libtirpc3 libgssapi-krb5-2 libkrb5-3 libkrb5support0 libkeyutils1 \
+	  libgpg-error0 libk5crypto3 libcom-err2 mosquitto && \
+	cd ..
+	find debs -type f -exec echo Extracting {} \; -exec dpkg -x {} ${TARGET} \;
 
 clean:
-	go clean
-	rm -rf build
-	rm -f portable-walkthrough-go.raw
+	rm -rf debs
+	rm -rf ${TARGET}
+	rm -f ${SVCNAME}.raw
 
-.PHONY: all install-tools clean
+.PHONY: all install clean

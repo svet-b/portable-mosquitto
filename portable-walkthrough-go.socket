@@ -1,8 +1,0 @@
-[Unit]
-Description=Portable Walkthrough Go Edition Socket
-
-[Socket]
-ListenStream=8080
-
-[Install]
-WantedBy=sockets.target
